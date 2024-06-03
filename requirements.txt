@@ -7,3 +7,7 @@ easyocr
 filterpy
 scikit-image
 lapx
+imutils
+opencv-contrib-python
+patch-ng
+paddleocr
