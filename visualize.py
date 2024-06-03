@@ -1,9 +1,11 @@
-import ast
+import ast, os
 
 import cv2
 import numpy as np
 import pandas as pd
 
+SAMPLE_PATH='./samples'
+SAMPLE_NAME='cipali-cut.mp4'
 
 def draw_border(img, top_left, bottom_right, color=(0, 255, 0), thickness=10, line_length_x=200, line_length_y=200):
     x1, y1 = top_left
@@ -24,17 +26,17 @@ def draw_border(img, top_left, bottom_right, color=(0, 255, 0), thickness=10, li
     return img
 
 
-results = pd.read_csv('./test_interpolated.csv')
+results = pd.read_csv('./report/test_interpolated.csv')
 
 # load video
-video_path = './samples/pemudik.mp4'
+video_path = os.path.join(SAMPLE_PATH, SAMPLE_NAME)
 cap = cv2.VideoCapture(video_path)
 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Specify the codec
 fps = cap.get(cv2.CAP_PROP_FPS)
 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-out = cv2.VideoWriter('./out.mp4', fourcc, fps, (width, height))
+out = cv2.VideoWriter('./results/output.mp4', fourcc, fps, (width, height))
 
 license_plate = {}
 for car_id in np.unique(results['car_id']):

@@ -6,4 +6,4 @@ scipy
 easyocr
 filterpy
 scikit-image
-lap
+lapx

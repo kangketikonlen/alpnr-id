@@ -5,17 +5,19 @@ from ultralytics import YOLO
 from module.sort import *
 from util import get_car, read_license_plate, write_csv
 
+SAMPLE_PATH='./samples'
+SAMPLE_NAME='cipali-cut.mp4'
 
 results = {}
 
 mot_tracker = Sort()
 
 # load models
-coco_model = YOLO('yolov8n.pt')
-license_plate_detector = YOLO('./model/license_plate_detector.pt')
+coco_model = YOLO('./model/yolov8n.pt')
+detector_model = YOLO('./model/alpr-id.pt')
 
 # load video
-cap = cv2.VideoCapture('./samples/foreigner.mp4')
+cap = cv2.VideoCapture(os.path.join(SAMPLE_PATH, SAMPLE_NAME))
 
 vehicles = [2, 3, 5, 7]
 
@@ -25,6 +27,7 @@ ret = True
 while ret:
     frame_nmr += 1
     ret, frame = cap.read()
+    
     if ret:
         results[frame_nmr] = {}
         # detect vehicles
@@ -39,7 +42,7 @@ while ret:
         track_ids = mot_tracker.update(np.asarray(detections_))
 
         # detect license plates
-        license_plates = license_plate_detector(frame)[0]
+        license_plates = detector_model(frame)[0]
         for license_plate in license_plates.boxes.data.tolist():
             x1, y1, x2, y2, score, class_id = license_plate
 
@@ -50,7 +53,7 @@ while ret:
 
                 # crop license plate
                 license_plate_crop = frame[int(y1):int(y2), int(x1): int(x2), :]
-
+                
                 # process license plate
                 license_plate_crop_gray = cv2.cvtColor(license_plate_crop, cv2.COLOR_BGR2GRAY)
                 _, license_plate_crop_thresh = cv2.threshold(license_plate_crop_gray, 64, 255, cv2.THRESH_BINARY_INV)

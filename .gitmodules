@@ -1,6 +1,4 @@
-[submodule "sort"]
+[submodule "module"]
 path = module
 url = https://github.com/abewley/sort
-[submodule "module"]
-	path = module
-	url = https://github.com/abewley/sort
+ignore = dirty
