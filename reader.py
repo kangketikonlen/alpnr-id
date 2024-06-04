@@ -18,8 +18,13 @@ def clean_text(text):
     """Remove unwanted characters and extra parts from text."""
     text = text.replace(' ', '')
     text = text[:-1]
+    print(f"Cleaned text I: {text}")
     parts = text.split("-")[:-1]
-    return "-".join(parts)
+    text = "".join(parts)
+    print(f"Cleaned text II: {text}")
+    if len(parts) > 2:
+        return "-".join(parts)
+    return "".join(parts)
 
 def format_license_plate(text):
     """Format the license plate text into a readable format."""
@@ -51,11 +56,11 @@ def read_license_plate(image):
             label, score = lines[-1]
             cleaned_text = re.sub(r"[^\w\s]", "", label)
             license_plate_text += cleaned_text + "-"
-            print(f"License plate text: {label}, Score: {score}")
+            print(f"Text readed: {label}, Score: {score}")
 
-        print(f'Label: {license_plate_text}')
+        print(f'Raw text: {license_plate_text}')
         cleaned_text = clean_text(license_plate_text)
-        print(f'Cleaned text: {cleaned_text}')
+        print(f'Cleaned text final: {cleaned_text}')
         formatted_text = format_license_plate(cleaned_text)
         print(f'Formatted text: {formatted_text}')
     return formatted_text

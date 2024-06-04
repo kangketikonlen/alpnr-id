@@ -34,7 +34,7 @@ def process_image(sample_path, images_path, sr_model):
     
     # Detect license plates
     _, detector_model = load_models()
-    license_plates = detector_model(img)[0]
+    license_plates = detector_model(img, verbose=False)[0]
     x1, y1, x2, y2, score, class_id = license_plates.boxes.data.tolist()[0]
     
     # Crop license plate
@@ -52,7 +52,11 @@ def process_image(sample_path, images_path, sr_model):
     save_image(license_plate_crop_thresh, f"{images_path}/license_plate_thresh.jpg")
     
     # Read license plate
-    read_license_plate(license_plate_crop_thresh)
+    try:
+        read_license_plate(license_plate_crop_thresh)
+    except Exception as e:
+        print(f"Plat nomor tidak terbaca: {e}")
+        return
 
 def main(sample_path):
     # Check if the sample path exists
