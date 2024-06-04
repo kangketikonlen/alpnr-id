@@ -33,3 +33,4 @@ python main.py -s <image_path>
 - I use dataset from here [Vinlden Computer Vision Project](https://universe.roboflow.com/s1-upflo/viniden)
 - You can see the training scripts in [google colab](https://colab.research.google.com/drive/1_Kp7KEURw08YN7XyyOw1P0eGZmQXcanw?usp=sharing)
 - I use EDSR-x4 for better resolutions, unfortunately the number plate distorted.
+- This project doesn't have error handling so use it careful.
