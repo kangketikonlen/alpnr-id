@@ -1,104 +1,69 @@
+import argparse
 import cv2
-import numpy as np
-import os
 
+from cv2 import dnn_superres
 from ultralytics import YOLO
-from module.sort import *
-from util import get_car, read_license_plate, write_csv
+from reader import read_license_plate
 
-SAMPLE_PATH = './samples'
-SAMPLE_NAME = 'hikvision.mp4'
+IMAGES_PATH = './images'
+COCO_MODEL_PATH = './models/yolov8n.pt'
+DETECTOR_MODEL_PATH = './models/alpr-id.pt'
+SR_MODEL_PATH = './models/edsr-x4.pb'
 
-REPORT_PATH = './report'
-REPORT_NAME = 'test.csv'
-IMAGES_PATH = './images'  # Path to save images
+def setup_super_resolution(sr_model_path, scale=4):
+    """Initialize and configure the super-resolution model."""
+    sr = dnn_superres.DnnSuperResImpl_create()
+    sr.readModel(sr_model_path)
+    sr.setModel("edsr", scale)
+    return sr
 
-# Create directory to save images if it doesn't exist
-os.makedirs(IMAGES_PATH, exist_ok=True)
+def load_models():
+    """Load YOLO models for object detection and license plate recognition."""
+    coco_model = YOLO(COCO_MODEL_PATH)
+    detector_model = YOLO(DETECTOR_MODEL_PATH)
+    return coco_model, detector_model
 
-results = {}
+def save_image(image, path):
+    """Save the image to the specified path."""
+    cv2.imwrite(path, image)
 
-mot_tracker = Sort()
-
-# load models
-coco_model = YOLO('./models/yolov8n.pt')
-detector_model = YOLO('./models/alpr-id.pt')
-
-# load video
-cap = cv2.VideoCapture(os.path.join(SAMPLE_PATH, SAMPLE_NAME))
-
-vehicles = [2, 3, 5, 7]
-
-# read frames
-frame_nmr = -1
-ret = True
-while ret:
-    frame_nmr += 1
-    ret, frame = cap.read()
+def process_image(sample_path, images_path, sr_model):
+    """Process the sample image to detect and read the license plate."""
+    # Read image
+    img = cv2.imread(sample_path)
     
-    if ret:
-        results[frame_nmr] = {}
-        # Save the current frame for debugging
-        cv2.imwrite(f"{IMAGES_PATH}/frame_{frame_nmr}.jpg", frame)
-        print(f"Processing frame {frame_nmr}")
+    # Detect license plates
+    _, detector_model = load_models()
+    license_plates = detector_model(img)[0]
+    x1, y1, x2, y2, score, class_id = license_plates.boxes.data.tolist()[0]
+    
+    # Crop license plate
+    license_plate_crop = img[int(y1):int(y2), int(x1):int(x2), :]
+    save_image(license_plate_crop, f"{images_path}/license_plate.jpg")
+    
+    # Convert to grayscale
+    license_plate_crop_gray = cv2.cvtColor(license_plate_crop, cv2.COLOR_BGR2GRAY)
+    save_image(license_plate_crop_gray, f"{images_path}/license_plate_gray.jpg")
+    
+    # Apply thresholding
+    _, license_plate_crop_thresh = cv2.threshold(
+        license_plate_crop_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+    )
+    save_image(license_plate_crop_thresh, f"{images_path}/license_plate_thresh.jpg")
+    
+    # Read license plate
+    read_license_plate(license_plate_crop_thresh)
 
-        # detect vehicles
-        detections = coco_model(frame)[0]
-        print(f"Detections: {detections}")
+def main(sample_path):
+    # Setup super resolution model
+    sr_model = setup_super_resolution(SR_MODEL_PATH)
+    
+    # Process the sample image
+    process_image(sample_path, IMAGES_PATH, sr_model)
 
-        detections_ = []
-        for detection in detections.boxes.data.tolist():
-            x1, y1, x2, y2, score, class_id = detection
-            if int(class_id) in vehicles:
-                detections_.append([x1, y1, x2, y2, score])
-        
-        print(f"Filtered detections: {detections_}")
-
-        # track vehicles
-        track_ids = mot_tracker.update(np.asarray(detections_))
-        print(f"Track IDs: {track_ids}")
-
-        # detect license plates
-        license_plates = detector_model(frame)[0]
-        print(f"License plates: {license_plates}")
-
-        for license_plate in license_plates.boxes.data.tolist():
-            x1, y1, x2, y2, score, class_id = license_plate
-
-            # assign license plate to car
-            xcar1, ycar1, xcar2, ycar2, car_id = get_car(license_plate, track_ids)
-            print(f"Assigned car ID: {car_id}")
-
-            if car_id != -1:
-                # crop license plate
-                license_plate_crop = frame[int(y1):int(y2), int(x1): int(x2), :]
-                
-                # Save the cropped license plate for debugging
-                cv2.imwrite(f"{IMAGES_PATH}/frame_{frame_nmr}_license_plate_{car_id}.jpg", license_plate_crop)
-                
-                # process license plate
-                license_plate_crop_gray = cv2.cvtColor(license_plate_crop, cv2.COLOR_BGR2GRAY)
-                _, license_plate_crop_thresh = cv2.threshold(license_plate_crop_gray, 64, 255, cv2.THRESH_BINARY_INV)
-
-                # Save the processed license plate for debugging
-                cv2.imwrite(f"{IMAGES_PATH}/frame_{frame_nmr}_license_plate_thresh_{car_id}.jpg", license_plate_crop_gray)
-
-                # read license plate number
-                license_plate_text, license_plate_text_score = read_license_plate(license_plate_crop_gray)
-                print(f"License plate text: {license_plate_text}, Score: {license_plate_text_score}")
-
-                if license_plate_text is not None:
-                    results[frame_nmr][car_id] = {
-                        'car': {
-                            'bbox': [xcar1, ycar1, xcar2, ycar2]
-                        },
-                        'license_plate': {
-                        'bbox': [x1, y1, x2, y2],
-                        'text': license_plate_text,
-                        'bbox_score': score,
-                        'text_score': license_plate_text_score
-                        }
-                    }
-
-# write results
-write_csv(results, os.path.join(REPORT_PATH, REPORT_NAME))
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Process an image to detect and read license plates.')
+    parser.add_argument('-s', '--sample', required=True, help='Path to the sample image')
+    args = parser.parse_args()
+    
+    main(args.sample)

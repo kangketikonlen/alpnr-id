@@ -1,13 +1,5 @@
-ultralytics
-pandas
 opencv-python
-numpy
-scipy
-easyocr
-filterpy
-scikit-image
-lapx
-imutils
 opencv-contrib-python
-patch-ng
+ultralytics
+paddlepaddle
 paddleocr
