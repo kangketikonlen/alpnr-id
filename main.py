@@ -1,6 +1,6 @@
+import os
 import argparse
 import cv2
-
 from cv2 import dnn_superres
 from ultralytics import YOLO
 from reader import read_license_plate
@@ -55,6 +55,10 @@ def process_image(sample_path, images_path, sr_model):
     read_license_plate(license_plate_crop_thresh)
 
 def main(sample_path):
+    # Check if the sample path exists
+    if not os.path.exists(sample_path):
+        raise FileNotFoundError(f"Sample path '{sample_path}' does not exist.")
+    
     # Setup super resolution model
     sr_model = setup_super_resolution(SR_MODEL_PATH)
     
