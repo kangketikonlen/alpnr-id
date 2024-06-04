@@ -16,6 +16,10 @@ Create virtual environment using python venv
 ```bash
 python -m venv .venv
 ```
+Enable your virtual environment.
+```bash
+source .venv/bin/activat
+```
 Install requirements using pip.
 ```bash
 pip install -r requirements
